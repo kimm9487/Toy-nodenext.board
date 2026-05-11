@@ -1512,7 +1512,6 @@ function ExistingAttachments({
     </ul>
   );
 }
-
 // 첨부 이미지를 갤러리 형태로 표시하는 컴포넌트
 // 이미지 클릭 시 새 탭에서 원본 크기로 열림
 function AttachmentGallery({ attachments }: { attachments: Attachment[] }) {
