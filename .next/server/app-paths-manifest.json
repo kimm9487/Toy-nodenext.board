@@ -1,0 +1,14 @@
+{
+  "/api/posts/route": "app/api/posts/route.js",
+  "/page": "app/page.js",
+  "/api/auth/me/route": "app/api/auth/me/route.js",
+  "/api/blocked-words/route": "app/api/blocked-words/route.js",
+  "/api/admin/posts/route": "app/api/admin/posts/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/admin/users/route": "app/api/admin/users/route.js",
+  "/api/admin/blocked-words/route": "app/api/admin/blocked-words/route.js",
+  "/api/admin/stats/route": "app/api/admin/stats/route.js",
+  "/api/posts/[id]/route": "app/api/posts/[id]/route.js",
+  "/api/posts/[id]/comments/route": "app/api/posts/[id]/comments/route.js",
+  "/api/posts/[id]/like/route": "app/api/posts/[id]/like/route.js"
+}

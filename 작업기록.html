@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>작업기록 — node-board</title>
+  <style>
+    :root {
+      --navy: #213553;
+      --navy-light: #2c4b74;
+      --red: #e45b5b;
+      --page: #e9edf3;
+      --border: #b9c4d3;
+      --grid: #d7dde6;
+      --head: #f7f8fa;
+      --text: #071326;
+      --muted: #4b5870;
+      --white: #ffffff;
+      --green: #2e7d4f;
+      --green-bg: #edf7f1;
+      --amber: #92610a;
+      --amber-bg: #fff8dc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: var(--page);
+      color: var(--text);
+      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    header {
+      background: var(--navy);
+      border-bottom: 3px solid var(--red);
+      color: var(--white);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    header span {
+      font-size: 12px;
+      color: #b8cce4;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .summary-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--navy-light);
+      padding: 14px 16px;
+    }
+
+    .summary-card .label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .summary-card .value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .section {
+      background: var(--white);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .section-header {
+      background: var(--head);
+      border-bottom: 1px solid var(--grid);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0;
+      color: #1a2f4a;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .badge-done   { background: var(--green-bg); color: var(--green); border: 1px solid #b4ddc6; }
+    .badge-fix    { background: #fef0f0; color: #b63b2c; border: 1px solid #f5c0b8; }
+    .badge-doc    { background: #eef3ff; color: #2d4d9f; border: 1px solid #b8cbf5; }
+    .badge-info   { background: var(--amber-bg); color: var(--amber); border: 1px solid #e2ca75; }
+    .badge-new    { background: #f0e8ff; color: #5b2ea6; border: 1px solid #cdb8f5; }
+
+    .task-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .task-list > li {
+      border-bottom: 1px solid var(--grid);
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .task-list > li:last-child {
+      border-bottom: 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #0d1f36;
+    }
+
+    .task-desc {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .task-desc code {
+      background: #f0f3f8;
+      border: 1px solid var(--grid);
+      border-radius: 2px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 11px;
+      padding: 1px 5px;
+    }
+
+    .file-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .file-list li {
+      border: none;
+      padding: 0;
+      display: block;
+    }
+
+    .file-tag {
+      background: #f0f3f8;
+      border: 1px solid var(--border);
+      color: #24496f;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 11px;
+      padding: 3px 8px;
+      display: inline-block;
+    }
+
+    .file-tag.new {
+      background: #f5f0ff;
+      border-color: #cdb8f5;
+      color: #5b2ea6;
+    }
+
+    .error-block {
+      background: #fef8f8;
+      border: 1px solid #f5c0b8;
+      border-left: 3px solid var(--red);
+      font-size: 12px;
+      margin-top: 6px;
+      padding: 8px 10px;
+      color: #7a2020;
+      line-height: 1.6;
+    }
+
+    .error-block code {
+      background: #fce8e8;
+      border: 1px solid #f5c0b8;
+      border-radius: 2px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 11px;
+      padding: 1px 5px;
+    }
+
+    .resolve-block {
+      background: var(--green-bg);
+      border: 1px solid #b4ddc6;
+      border-left: 3px solid var(--green);
+      font-size: 12px;
+      margin-top: 6px;
+      padding: 8px 10px;
+      color: #1a4a30;
+      line-height: 1.6;
+    }
+
+    .resolve-block code {
+      background: #d6f0e2;
+      border: 1px solid #b4ddc6;
+      border-radius: 2px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 11px;
+      padding: 1px 5px;
+    }
+
+    table.schema {
+      border-collapse: collapse;
+      font-size: 12px;
+      width: 100%;
+    }
+
+    table.schema th, table.schema td {
+      border: 1px solid var(--grid);
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    table.schema th {
+      background: var(--head);
+      font-weight: 700;
+      color: #26364e;
+    }
+
+    .schema-wrap {
+      padding: 14px 16px;
+    }
+
+    .sql-source {
+      background: #071326;
+      border: 1px solid #203d63;
+      color: #edf4ff;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      margin: 12px 0 0;
+      max-height: 520px;
+      overflow: auto;
+      padding: 12px 14px;
+      white-space: pre;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 32px;
+      padding-top: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>node-board 작업기록</h1>
+  <span>최종 업데이트: 2026-05-08 (삭제 댓글 플레이스홀더)</span>
+</header>
+
+<div class="wrap">
+
+  <!-- 요약 카드 -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">프로젝트</div>
+      <div class="value" style="font-size:15px;">node-board</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">기술 스택</div>
+      <div class="value" style="font-size:13px;">Next.js 14 + MySQL</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">구현 기능</div>
+      <div class="value">27</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">트러블슈팅</div>
+      <div class="value">9</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">API 라우트</div>
+      <div class="value">21</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">문서화</div>
+      <div class="value">CLAUDE.md</div>
+    </div>
+  </div>
+
+  <!-- 1. 기반 구축 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>1. 기반 구축</h2>
+      <span class="badge badge-done">완료</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">DB 스키마 마이그레이션</div>
+          <div class="task-desc">
+            PHP CodeIgniter 3 참조 SQL을 분석해 Next.js 프로젝트용 스키마로 재설계.<br>
+            게시물과 댓글을 <code>board_posts</code> 단일 테이블로 통합.
+            <code>parent_id</code> / <code>thread_id</code> / <code>depth</code> 컬럼으로 트리 구조 표현.
+            소프트 삭제(<code>is_deleted</code>), 이미지 저장용 <code>attachments</code> 테이블 포함.
+          </div>
+          <div style="margin-top:10px;">
+            <table class="schema">
+              <thead>
+                <tr><th>테이블</th><th>역할</th><th>주요 컬럼</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>users</td><td>회원 정보</td><td>id, username, display_name, password_hash</td></tr>
+                <tr><td>user_sessions</td><td>세션 관리</td><td>session_id, user_id, is_active, logout_at</td></tr>
+                <tr><td>board_posts</td><td>게시물 + 댓글 통합</td><td>parent_id, thread_id, depth, is_deleted</td></tr>
+                <tr><td>attachments</td><td>이미지 저장</td><td>post_id, mime_type, byte_size, data(LONGBLOB)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">migrations/schema.sql</span></li>
+          <li><span class="file-tag">lib/types.ts</span></li>
+          <li><span class="file-tag">lib/db.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">인증 시스템 구현</div>
+          <div class="task-desc">
+            로그인·로그아웃·회원가입 API 라우트 및 UI 구현.
+            비밀번호 해싱은 <code>PBKDF2</code>(Node crypto) 사용.
+            세션은 <code>node_board_session</code> httpOnly 쿠키로 관리.
+            로그인·가입 성공 알림 메시지 제거 — 오류 메시지만 표시.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/api/auth/*</span></li>
+          <li><span class="file-tag">lib/auth.ts</span></li>
+          <li><span class="file-tag">app/page.tsx</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 2. 게시판 기능 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>2. 게시판 기능 구현</h2>
+      <span class="badge badge-done">완료</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">게시물 수정·삭제 버튼</div>
+          <div class="task-desc">
+            상세 화면에 <code>목록 / 수정 / 삭제</code> 순서로 버튼 배치.
+            본인 게시물에만 수정·삭제 버튼 노출. 관리자는 모든 게시물 삭제 가능.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">댓글·답글 답글/수정/삭제 버튼</div>
+          <div class="task-desc">
+            모든 depth의 댓글에 <code>답글 / 수정 / 삭제</code> 버튼 추가.
+            <code>ReplyItem</code> 컴포넌트가 재귀 렌더링하므로 모든 중첩 레벨에 자동 적용.
+            본인 댓글에만 수정·삭제 노출, 로그인 유저에게만 답글 노출.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">BOARD 로고 클릭 시 목록 이동</div>
+          <div class="task-desc">
+            헤더의 <code>BOARD</code> 텍스트를 <code>&lt;button&gt;</code>으로 변경.
+            클릭 시 <code>selectedPost</code>, 작성 폼, 수정 폼 등 전체 상태 초기화 후 목록으로 복귀.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">답글 폼 중복 노출 수정 / 컨텍스트 레이블</div>
+          <div class="task-desc">
+            답글 버튼 클릭 시 인라인 폼과 하단 폼이 동시에 열리던 문제 수정.
+            <code>openReplyId !== null</code>이거나 <code>editingReplyId !== null</code>이면 하단 기본 폼 숨김.
+            폼 상단에 현재 작성 대상("원글에 댓글" / "<strong>닉네임</strong> 님에게 답글") 표시.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">게시판 검색 기능</div>
+          <div class="task-desc">
+            목록 화면 상단에 검색 바 추가. 분류 / 제목 / 작성자 탭 선택 후 검색.<br>
+            <strong>제목·작성자</strong>: 텍스트 부분 일치(대소문자 무관).<br>
+            <strong>분류</strong>: 전체 / 공지 / 일반 드롭다운 선택.<br>
+            검색 중 결과 건수 표시 및 초기화 버튼 노출. 모두 클라이언트 필터링(추가 API 없음).
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 3. 이미지 첨부 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>3. 이미지 첨부 기능</h2>
+      <span class="badge badge-done">완료</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">이미지 업로드 및 DB 저장</div>
+          <div class="task-desc">
+            게시물·댓글·답글에 jpg/png/gif 이미지 첨부 기능 추가.
+            이미지를 파일 시스템이 아닌 MySQL <code>LONGBLOB</code>으로 직접 저장.
+            파일당 최대 8 MB, 허용 MIME 타입 검증(<code>validateImageFiles</code>).
+            <code>GET /api/attachments/[id]</code>로 서빙, <code>Cache-Control: private, max-age=86400</code> 적용.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">lib/attachments.ts</span></li>
+          <li><span class="file-tag">app/api/attachments/[id]/route.ts</span></li>
+          <li><span class="file-tag">app/api/posts/route.ts</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/comments/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">이미지만 있는 댓글 허용</div>
+          <div class="task-desc">
+            텍스트 없이 이미지만 첨부해도 댓글·답글 등록 가능.
+            프론트: <code>required={draft.files.length === 0}</code>으로 조건부 필수.
+            백엔드: <code>if (!content && images.length === 0)</code> 조건으로 검증.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/comments/route.ts</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 4. 마이페이지 & 관리자 대시보드 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>4. 마이페이지 &amp; 관리자 대시보드</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">DB 확장 마이그레이션 (02_admin_mypage.sql)</div>
+          <div class="task-desc">
+            관리자·마이페이지 기능에 필요한 스키마 확장. XAMPP MySQL CLI로 직접 실행.<br>
+            • <code>users.is_banned</code>, <code>users.banned_at</code> — 회원 정지 기능<br>
+            • <code>board_posts.is_notice</code> — 공지사항 구분 플래그<br>
+            • <code>reports</code> 테이블 — 신고 내역 (post_id, reporter_id, reason, is_resolved)<br>
+            • <code>blocked_words</code> 테이블 — 금칙어 목록
+          </div>
+          <div class="resolve-block" style="margin-top:8px;">
+            실행: <code>"C:\xampp\mysql\bin\mysql.exe" -u root node_board &lt; migrations/02_admin_mypage.sql</code>
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">migrations/02_admin_mypage.sql</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">마이페이지 구현</div>
+          <div class="task-desc">
+            로그인 유저 전용 페이지. 비로그인 시 메인으로 리다이렉트.<br>
+            <strong>내 게시글 탭</strong>: 본인이 작성한 최상위 게시물 목록 (번호·분류·제목·작성일·조회·댓글수).<br>
+            <strong>댓글 단 게시글 탭</strong>: 내 댓글이 달린 원글 목록 + 내 댓글 수 표시.<br>
+            행 클릭 시 <code>/?post=N</code>으로 이동 후 자동 상세 오픈 (<code>window.history.replaceState</code>으로 URL 정리).
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/mypage/page.tsx</span></li>
+          <li><span class="file-tag new">app/api/mypage/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">관리자 대시보드 구현</div>
+          <div class="task-desc">
+            <code>admin</code> 계정 전용. 비관리자 접근 시 메인으로 리다이렉트.<br><br>
+            <strong>KPI 카드</strong> — 오늘 게시글·댓글·가입·총 회원·총 게시글 스칼라 서브쿼리.<br>
+            <strong>트래픽 차트</strong> — 최근 14일 로그인 세션을 SVG 바 차트로 표시 (차트 라이브러리 없음).<br>
+            <strong>기기 비율</strong> — <code>user_agent</code> REGEXP로 모바일/PC 구분, conic-gradient 도넛 차트.<br>
+            <strong>최신 게시글</strong> — 관리자 직접 삭제 버튼 포함.<br>
+            <strong>회원 관리</strong> — 전체 회원 목록, 정지/해제 버튼 (<code>admin</code> 계정 제외). 정지 시 기존 세션 무효화.<br>
+            <strong>공지사항 등록</strong> — <code>is_notice=1</code> 게시물 생성. jpg/png/gif 이미지 첨부 지원.<br>
+            <strong>금칙어 관리</strong> — 추가/삭제 UI (관리자 대시보드 섹션).<br>
+            <strong>미처리 신고 목록</strong> — 신고 처리 모달에서 반려·승인(삭제) 선택.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/admin/page.tsx</span></li>
+          <li><span class="file-tag new">app/api/admin/stats/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/posts/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/users/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/users/[id]/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/notices/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/blocked-words/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/blocked-words/[id]/route.ts</span></li>
+          <li><span class="file-tag new">app/api/admin/reports/[id]/route.ts</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 5. 금칙어 시스템 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>5. 금칙어 시스템</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">서버 저장 시 *** 치환</div>
+          <div class="task-desc">
+            게시글·댓글 저장/수정 시 <code>blocked_words</code> 테이블을 조회해 금칙어를 <code>***</code>으로 치환 후 저장.<br>
+            <code>ORDER BY LENGTH(word) DESC</code>로 긴 단어 우선 치환 — 부분 일치 오류 방지.<br>
+            정규식 특수문자 이스케이프 처리.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">lib/filter.ts</span></li>
+          <li><span class="file-tag">app/api/posts/route.ts</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+          <li><span class="file-tag">app/api/posts/[id]/comments/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">실시간 클라이언트 경고 배너</div>
+          <div class="task-desc">
+            마운트 시 <code>GET /api/blocked-words</code>로 금칙어 목록 로드 (공개 엔드포인트, 단어만 반환).<br>
+            글쓰기·수정 폼, 댓글·답글 폼에서 내용 입력 중 금칙어 감지 시 황색 경고 배너 표시.<br>
+            예) <em>"금칙어가 포함되어 있습니다: 도박"</em><br>
+            저장은 가능하며, 서버에서 실제 *** 치환이 일어남.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/api/blocked-words/route.ts</span></li>
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6. 신고 시스템 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>6. 신고 시스템</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">사용자 신고 모달</div>
+          <div class="task-desc">
+            타인의 게시물·댓글에 노출되는 신고 버튼.
+            클릭 시 <code>window.prompt</code> 대신 모달로 신고 사유 작성 UI 제공.
+            사유 입력은 선택 사항, 취소·신고 접수 버튼.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/api/reports/route.ts</span></li>
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">관리자 신고 처리 모달</div>
+          <div class="task-desc">
+            관리자 대시보드 신고 목록의 "처리" 버튼 클릭 시 모달 표시.<br>
+            대상 게시물 제목, 신고자, 사유 확인 후 처리 방식 선택:<br>
+            • <strong>반려</strong> — 신고만 종결, 게시물 유지.<br>
+            • <strong>승인 (게시물 삭제)</strong> — 게시물 소프트 삭제 + 신고 종결 동시 처리.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/admin/page.tsx</span></li>
+          <li><span class="file-tag">app/api/admin/reports/[id]/route.ts</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 7. 공지사항 이미지 업로드 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>7. 공지사항 이미지 업로드</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">관리자 공지사항 등록 폼에 이미지 첨부 추가</div>
+          <div class="task-desc">
+            기존 JSON 전송 방식에서 <code>multipart/form-data</code>로 전환.
+            jpg/png/gif 파일 선택 UI 추가, 선택 파일 목록 및 개별 제거 가능.
+            백엔드: <code>validateImageFiles</code> + <code>saveAttachments</code> 기존 유틸 재사용.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/api/admin/notices/route.ts</span></li>
+          <li><span class="file-tag">app/admin/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 8. 트러블슈팅 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>8. 트러블슈팅</h2>
+      <span class="badge badge-fix">버그 수정</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">어드민 비밀번호 해싱 불일치</div>
+          <div class="task-desc">스키마 시드에 CI3 bcrypt 해시가 포함되어 있어 로그인 실패.</div>
+          <div class="error-block">CI3는 <code>bcrypt</code> 사용, Next.js 인증은 <code>PBKDF2</code>만 검증 → 항상 로그인 실패</div>
+          <div class="resolve-block">
+            <code>hashPassword("123456")</code>로 PBKDF2 해시 생성 후<br>
+            <code>UPDATE users SET password_hash='pbkdf2$...' WHERE username='admin'</code> 실행
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">lib/auth.ts</span></li>
+          <li><span class="file-tag">migrations/schema.sql</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">TypeScript: Buffer → BodyInit 타입 오류</div>
+          <div class="task-desc">이미지 서빙 라우트에서 mysql2가 반환하는 Buffer를 NextResponse에 전달 시 타입 오류.</div>
+          <div class="error-block"><code>Buffer</code>는 <code>BodyInit</code>에 직접 할당 불가 — TS 컴파일 오류</div>
+          <div class="resolve-block"><code>row.data as unknown as BodyInit</code> 캐스팅으로 해결</div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/api/attachments/[id]/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">MySQL max_allowed_packet 초과</div>
+          <div class="task-desc">XAMPP 기본값 1 MB로는 이미지 INSERT 불가.</div>
+          <div class="error-block"><code>ER_NET_PACKET_TOO_LARGE</code> — 8 MB 이미지 저장 실패</div>
+          <div class="resolve-block">
+            런타임: <code>SET GLOBAL max_allowed_packet = 67108864;</code><br>
+            영구 적용: <code>my.ini</code>에 <code>max_allowed_packet=64M</code> 추가
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">XAMPP my.ini</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">POST /api/posts 404 + "Failed to find Server Action"</div>
+          <div class="task-desc">multipart 라우트 핸들러 추가 후 .next 캐시가 오래된 Server Action 정보를 참조.</div>
+          <div class="error-block"><code>.next/</code> 빌드 캐시가 새 Route Handler를 인식하지 못하고 Server Action으로 오해</div>
+          <div class="resolve-block"><code>.next/</code> 디렉터리 삭제 후 <code>npm run dev</code> 재시작으로 해결</div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">.next/ (캐시)</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">CSS가 중첩 댓글 버튼 숨김</div>
+          <div class="task-desc">depth 2 이상 댓글의 답글/수정/삭제 버튼이 보이지 않던 문제.</div>
+          <div class="error-block"><code>.reply-list .reply-button { display: none }</code> 규칙이 잔존해 중첩 버튼 전체 숨김</div>
+          <div class="resolve-block">해당 CSS 규칙 삭제로 해결 — 모든 depth에서 버튼 정상 노출</div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">ER_BAD_FIELD_ERROR: Unknown column 'p.is_notice'</div>
+          <div class="task-desc">관리자 대시보드 기능 추가 후 게시판 접근 시 500 오류 발생.</div>
+          <div class="error-block"><code>02_admin_mypage.sql</code> 마이그레이션 미실행 — <code>is_notice</code>, <code>is_banned</code>, <code>reports</code>, <code>blocked_words</code> 전부 없음</div>
+          <div class="resolve-block">
+            phpMyAdmin 없이 XAMPP MySQL CLI로 직접 실행:<br>
+            <code>"C:\xampp\mysql\bin\mysql.exe" -u root node_board &lt; migrations/02_admin_mypage.sql</code>
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">migrations/02_admin_mypage.sql</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">TS6133: handleReport 선언은 되었지만 읽히지 않음</div>
+          <div class="task-desc">신고 API 함수를 추가했으나 JSX에서 사용하지 않아 TypeScript 빌드 오류.</div>
+          <div class="error-block"><code>'handleReport'이(가) 선언은 되었지만 해당 값이 읽히지는 않았습니다.</code></div>
+          <div class="resolve-block">
+            게시물 상세 액션 버튼 영역과 <code>ReplyItem</code> 댓글 액션 영역에 신고 버튼 JSX 추가.<br>
+            <code>onReport</code> prop을 <code>ReplyItemProps</code>에 포함하고 호출부에서 전달.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">comment_likes 테이블 없음 — 좋아요 API 500 오류</div>
+          <div class="task-desc">댓글 좋아요 기능 구현 후 개발 서버 재시작 시 INSERT 쿼리 실패.</div>
+          <div class="error-block"><code>Table 'node_board.comment_likes' doesn't exist</code> — schema.sql은 전체 재생성용이라 기존 DB에 새 테이블이 없음</div>
+          <div class="resolve-block">
+            <code>lib/db.ts</code> 풀 초기화 블록에 <code>CREATE TABLE IF NOT EXISTS comment_likes ...</code> 추가.<br>
+            앱 최초 요청 시 자동 생성 — 이후 테이블이 있으면 무시(idempotent).<br>
+            <code>globalForMysql.dbInited</code> 플래그로 중복 실행 방지.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">lib/db.ts</span></li>
+          <li><span class="file-tag">migrations/schema.sql</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">Cannot find module './276.js' (.next 캐시 파편화)</div>
+          <div class="task-desc">파일 변경 후 개발 서버 재시작 없이 빌드만 반복하면 webpack 청크 번호가 달라져 런타임 오류 발생.</div>
+          <div class="error-block">
+            <code>webpack-runtime.js</code>가 존재하지 않는 청크 파일(<code>276.js</code>)을 참조 — 페이지 렌더링 500
+          </div>
+          <div class="resolve-block">
+            <code>Remove-Item -Recurse -Force .next</code> 후 <code>npm run build</code> 재실행으로 해결
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">.next/ (캐시)</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 9. 문서화 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>9. 문서화</h2>
+      <span class="badge badge-doc">문서</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">CLAUDE.md 작성 및 업데이트</div>
+          <div class="task-desc">
+            Claude Code 전용 프로젝트 가이드 문서 작성·최신화 (한국어).<br><br>
+            <strong>주요 섹션:</strong><br>
+            • 명령어 — dev / build / lint / start<br>
+            • 기술 스택 — Next.js 14, TypeScript 5 strict, React 18, mysql2/promise, PBKDF2 인증<br>
+            • 프로젝트 구조 — 모든 파일 역할과 API 라우트 HTTP 메서드 명시<br>
+            • DB 스키마 — 컬럼 의미, XAMPP max_allowed_packet, 어드민 비밀번호 처리<br>
+            • 코딩 컨벤션 — named placeholder, 소프트 삭제, text 객체, 팩토리 함수, requestJson 패턴<br>
+            • 성능 기준 — Lighthouse 90점 이상 (번들 크기, 이미지 캐시, 접근성, 제목 계층, CLS)
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">CLAUDE.md</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">VS Code TypeScript 버전 안내</div>
+          <div class="task-desc">
+            <code>import "./globals.css"</code>에 빨간줄이 생기는 원인 분석 및 해결 방법 안내.
+          </div>
+          <div class="resolve-block">
+            VS Code 내장 TypeScript가 <code>tsconfig.json plugins</code>의 Next.js 플러그인을 로드하지 못함.<br>
+            <code>Ctrl+Shift+P</code> → <strong>TypeScript: Select TypeScript Version</strong>
+            → <strong>Use Workspace Version</strong> 선택으로 해결.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">tsconfig.json</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 10. 변경 파일 전체 목록 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>10. 변경 파일 전체 목록</h2>
+      <span class="badge badge-info">참고</span>
+    </div>
+    <div style="padding: 14px 16px;">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:10px; font-weight:700;">기존 파일 (수정)</div>
+      <ul class="file-list" style="margin-bottom:14px;">
+        <li><span class="file-tag">migrations/schema.sql</span></li>
+        <li><span class="file-tag">lib/types.ts</span></li>
+        <li><span class="file-tag">lib/db.ts</span></li>
+        <li><span class="file-tag">lib/auth.ts</span></li>
+        <li><span class="file-tag">lib/attachments.ts</span></li>
+        <li><span class="file-tag">app/layout.tsx</span></li>
+        <li><span class="file-tag">app/page.tsx</span></li>
+        <li><span class="file-tag">app/globals.css</span></li>
+        <li><span class="file-tag">app/api/auth/login/route.ts</span></li>
+        <li><span class="file-tag">app/api/auth/logout/route.ts</span></li>
+        <li><span class="file-tag">app/api/auth/register/route.ts</span></li>
+        <li><span class="file-tag">app/api/auth/me/route.ts</span></li>
+        <li><span class="file-tag">app/api/posts/route.ts</span></li>
+        <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+        <li><span class="file-tag">app/api/posts/[id]/comments/route.ts</span></li>
+        <li><span class="file-tag">app/api/attachments/[id]/route.ts</span></li>
+        <li><span class="file-tag">CLAUDE.md</span></li>
+      </ul>
+      <div style="font-size:11px; color:#5b2ea6; margin-bottom:10px; font-weight:700;">신규 파일</div>
+      <ul class="file-list">
+        <li><span class="file-tag new">migrations/02_admin_mypage.sql</span></li>
+        <li><span class="file-tag new">lib/filter.ts</span></li>
+        <li><span class="file-tag new">app/mypage/page.tsx</span></li>
+        <li><span class="file-tag new">app/admin/page.tsx</span></li>
+        <li><span class="file-tag new">app/api/mypage/route.ts</span></li>
+        <li><span class="file-tag new">app/api/reports/route.ts</span></li>
+        <li><span class="file-tag new">app/api/blocked-words/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/stats/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/posts/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/users/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/users/[id]/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/notices/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/blocked-words/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/blocked-words/[id]/route.ts</span></li>
+        <li><span class="file-tag new">app/api/admin/reports/[id]/route.ts</span></li>
+        <li><span class="file-tag new">app/api/posts/[id]/like/route.ts</span></li>
+        <li><span class="file-tag new">app/api/auth/google/route.ts</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 12. 댓글 좋아요 & 베스트 댓글 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>12. 댓글 좋아요 &amp; 베스트 댓글</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">comment_likes 테이블 &amp; 좋아요 토글 API</div>
+          <div class="task-desc">
+            <code>comment_likes</code> 테이블 신규 추가 — <code>(post_id, user_id)</code> UNIQUE 제약으로 중복 방지.<br>
+            <code>POST /api/posts/[id]/like</code>: 이미 눌렀으면 취소(DELETE), 아니면 추가(INSERT).<br>
+            응답: <code>{ liked: boolean, count: number }</code>.<br>
+            본인 댓글에는 좋아요 불가(프론트 비활성 처리). 비로그인 시 401 반환.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/api/posts/[id]/like/route.ts</span></li>
+          <li><span class="file-tag">migrations/schema.sql</span></li>
+          <li><span class="file-tag">lib/db.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">GET /api/posts/[id] — likeCount &amp; likedByMe 포함</div>
+          <div class="task-desc">
+            게시물 상세 로드 시 모든 댓글(replyRows)에 대해 좋아요 수와 현재 유저 좋아요 여부를 함께 반환.<br>
+            배치 쿼리 2개 (IN 절): ① <code>COUNT(*) GROUP BY post_id</code> ② 현재 유저의 liked post_id 목록.<br>
+            <code>applyLikeData()</code> 재귀 함수로 트리 전체에 <code>likeCount</code>, <code>likedByMe</code> 세팅.<br>
+            <code>ReplyNode</code> 타입에 두 필드 추가.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+          <li><span class="file-tag">lib/types.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">좋아요 버튼 UI &amp; 베스트 댓글 섹션</div>
+          <div class="task-desc">
+            <strong>좋아요 버튼</strong>: 댓글 액션 영역 맨 앞에 <code>♥ N</code> 버튼 배치.
+            로그인 유저에게만 활성, 눌린 상태는 빨간색으로 구분 (<code>.like-button.liked</code>).<br><br>
+            <strong>베스트 댓글</strong>: 좋아요 1개 이상인 댓글 중 최다 좋아요 댓글을
+            댓글 섹션 맨 위에 황색 박스(<code>.best-comment</code>)로 고정 노출.<br>
+            일반 댓글 목록에서 해당 댓글은 왼쪽 황색 보더 + 연한 배경(<code>.comment-item--best</code>)으로 하이라이트.<br><br>
+            <code>findTopComment()</code> 모듈 레벨 헬퍼가 전체 트리를 재귀 탐색해 최다 좋아요 노드를 반환.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 13. Google 소셜 로그인 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>13. Google 소셜 로그인</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">Google Identity Services 스크립트 로드</div>
+          <div class="task-desc">
+            <code>app/layout.tsx</code>에 Next.js <code>&lt;Script&gt;</code> 컴포넌트(<code>strategy="lazyOnload"</code>)로
+            <code>https://accounts.google.com/gsi/client</code> 스크립트를 전역 로드.<br>
+            사용자 인터랙션 이후 지연 로드되므로 초기 LCP에 영향 없음.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/layout.tsx</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">POST /api/auth/google — 신규·기존 유저 통합 처리</div>
+          <div class="task-desc">
+            프론트에서 받은 <strong>ID 토큰</strong>을 Google <code>tokeninfo</code> 엔드포인트로 서버 측 검증.<br>
+            <code>aud</code> 필드가 등록된 클라이언트 ID와 일치하는지 확인 — 위조 토큰 차단.<br><br>
+            <strong>기존 Google 유저</strong>(<code>google_id</code> 일치): 바로 세션 발급.<br>
+            <strong>신규 유저</strong>: 이메일 앞부분(<code>@</code> 앞)에서 username 자동 생성,
+            영숫자·밑줄만 허용, 중복 시 숫자 suffix 추가. <code>password_hash</code>는 빈 문자열 저장(비밀번호 로그인 불가).<br>
+            차단된 계정(<code>is_banned=1</code>)은 403 반환 — 모달 내 에러로 표시.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag new">app/api/auth/google/route.ts</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">GoogleSignInButton 컴포넌트 &amp; 모달 UI 연결</div>
+          <div class="task-desc">
+            <code>GoogleSignInButton</code> — 모듈 레벨 React 컴포넌트.<br>
+            <code>useRef</code>로 콜백을 항상 최신 값으로 유지하면서 <code>useEffect</code>는 마운트 시 한 번만 실행(불필요한 재렌더 방지).<br>
+            GIS 스크립트 로드 완료 전에는 200 ms 인터벌로 재시도, 로드되면 <code>renderButton()</code> 호출.<br>
+            로그인·회원가입 모달 <code>auth-actions</code> 아래에 <code>─── 또는 ───</code> 구분선과 함께 배치.<br>
+            Google 버튼 클릭 시 팝업으로 계정 선택 → 성공하면 <code>handleGoogleLogin(credential)</code> 호출.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+      <li>
+        <div>
+          <div class="task-title">users.google_id 컬럼 자동 마이그레이션</div>
+          <div class="task-desc">
+            <code>lib/db.ts</code> 풀 생성 직후 <code>ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL</code> 실행.<br>
+            이미 컬럼이 존재하면 오류를 <code>.catch(() =&gt; undefined)</code>로 무시(idempotent).<br>
+            UNIQUE 인덱스(<code>uq_users_google_id</code>)도 동일 방식으로 자동 추가.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">lib/db.ts</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 14. 삭제 댓글 플레이스홀더 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>14. 삭제 댓글 플레이스홀더</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">삭제된 댓글을 트리에서 제거하지 않고 자리 표시</div>
+          <div class="task-desc">
+            기존에는 댓글 조회 쿼리에 <code>AND is_deleted = 0</code> 조건이 있어 삭제된 댓글이 아예 제외됐음.<br>
+            삭제된 댓글에 답글이 달려 있으면 하위 대화 흐름이 끊기는 문제가 있었음.<br><br>
+            <strong>변경 내용:</strong><br>
+            • API: 댓글 쿼리에서 <code>AND is_deleted = 0</code> 제거 — 삭제된 댓글도 트리에 포함.<br>
+            • <code>ReplyNode</code> 타입에 <code>isDeleted: boolean</code> 필드 추가, <code>toReplyNode()</code>에서 세팅.<br>
+            • <code>replyCount</code>는 <code>replyRows.filter(r =&gt; r.is_deleted === 0).length</code>로 비삭제 댓글만 카운트 유지.<br>
+            • 프론트 <code>ReplyItem</code>: <code>reply.isDeleted</code>이면 작성자·날짜·내용·버튼 전부 숨기고
+            <em>"삭제된 댓글입니다."</em> 텍스트(<code>.comment-deleted</code>)만 렌더링.<br>
+            • 하위 답글(<code>reply.replies</code>)은 삭제 여부와 무관하게 그대로 표시 — 대화 맥락 유지.
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/api/posts/[id]/route.ts</span></li>
+          <li><span class="file-tag">lib/types.ts</span></li>
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 추가 UX 개선 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>11. UX 개선</h2>
+      <span class="badge badge-new">신규</span>
+    </div>
+    <ul class="task-list">
+      <li>
+        <div>
+          <div class="task-title">차단 계정 로그인 에러 — 모달 내 표시</div>
+          <div class="task-desc">
+            기존에는 로그인·회원가입 실패 메시지가 <code>setMessage</code>를 통해 게시판 상단 <code>.notice</code> 영역에 표시됐음.<br>
+            모달이 열려 있는 상태에서 에러가 모달 바깥에 표시되는 UX 문제 개선.<br><br>
+            <strong>변경 내용:</strong><br>
+            • <code>authError</code> 상태 추가 — 로그인·회원가입 catch 블록에서 <code>setMessage</code> 대신 <code>setAuthError</code> 사용.<br>
+            • 모달 내 <code>.auth-error</code> 박스로 에러 표시 (빨간 왼쪽 보더 스타일).<br>
+            • 모달 닫기·탭 전환(로그인↔회원가입) 시 <code>authError</code> 자동 초기화.<br>
+            • API 메시지 변경: <em>"정지된 계정입니다."</em> → <em>"차단된 계정입니다. 관리자에게 문의하세요."</em>
+          </div>
+        </div>
+        <ul class="file-list">
+          <li><span class="file-tag">app/page.tsx</span></li>
+          <li><span class="file-tag">app/api/auth/login/route.ts</span></li>
+          <li><span class="file-tag">app/globals.css</span></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 15. 데이터베이스 스키마 인덱스 -->
+  <div class="section">
+    <div class="section-header">
+      <h2>15. 데이터베이스 스키마 인덱스</h2>
+      <span class="badge badge-doc">문서</span>
+    </div>
+    <div class="schema-wrap">
+      <table class="schema">
+        <thead>
+          <tr>
+            <th>테이블</th>
+            <th>인덱스 / 제약조건</th>
+            <th>컬럼</th>
+            <th>용도</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>users</td>
+            <td>PRIMARY KEY</td>
+            <td>id</td>
+            <td>회원 식별자</td>
+          </tr>
+          <tr>
+            <td>users</td>
+            <td>UNIQUE KEY uq_users_username</td>
+            <td>username</td>
+            <td>아이디 중복 방지 및 로그인 조회</td>
+          </tr>
+          <tr>
+            <td>user_sessions</td>
+            <td>PRIMARY KEY</td>
+            <td>session_id</td>
+            <td>세션 쿠키 기반 단건 조회</td>
+          </tr>
+          <tr>
+            <td>user_sessions</td>
+            <td>KEY idx_user_sessions_user_id</td>
+            <td>user_id</td>
+            <td>회원별 세션 조회</td>
+          </tr>
+          <tr>
+            <td>user_sessions</td>
+            <td>KEY idx_user_sessions_active</td>
+            <td>is_active, last_activity_at</td>
+            <td>활성 세션 및 만료 대상 조회</td>
+          </tr>
+          <tr>
+            <td>board_posts</td>
+            <td>PRIMARY KEY</td>
+            <td>id</td>
+            <td>게시글/댓글 식별자</td>
+          </tr>
+          <tr>
+            <td>board_posts</td>
+            <td>KEY idx_board_posts_user_id</td>
+            <td>user_id</td>
+            <td>작성자별 글/댓글 조회</td>
+          </tr>
+          <tr>
+            <td>board_posts</td>
+            <td>KEY idx_board_posts_parent_id</td>
+            <td>parent_id</td>
+            <td>댓글 및 대댓글 트리 조회</td>
+          </tr>
+          <tr>
+            <td>board_posts</td>
+            <td>KEY idx_board_posts_thread_id</td>
+            <td>thread_id</td>
+            <td>원글 단위 스레드 조회</td>
+          </tr>
+          <tr>
+            <td>board_posts</td>
+            <td>KEY idx_board_posts_list</td>
+            <td>thread_id, parent_id, created_at</td>
+            <td>게시글 목록 및 스레드 정렬 최적화</td>
+          </tr>
+          <tr>
+            <td>attachments</td>
+            <td>PRIMARY KEY</td>
+            <td>id</td>
+            <td>첨부파일 식별자</td>
+          </tr>
+          <tr>
+            <td>attachments</td>
+            <td>KEY idx_attachments_post_id</td>
+            <td>post_id</td>
+            <td>게시글/댓글별 첨부파일 조회</td>
+          </tr>
+          <tr>
+            <td>comment_likes</td>
+            <td>PRIMARY KEY</td>
+            <td>id</td>
+            <td>좋아요 식별자</td>
+          </tr>
+          <tr>
+            <td>comment_likes</td>
+            <td>UNIQUE KEY uq_comment_likes_post_user</td>
+            <td>post_id, user_id</td>
+            <td>사용자별 댓글 좋아요 중복 방지</td>
+          </tr>
+          <tr>
+            <td>comment_likes</td>
+            <td>KEY idx_comment_likes_post_id</td>
+            <td>post_id</td>
+            <td>댓글별 좋아요 수 집계</td>
+          </tr>
+          <tr>
+            <td>comment_likes</td>
+            <td>KEY idx_comment_likes_user_id</td>
+            <td>user_id</td>
+            <td>사용자 좋아요 여부 조회</td>
+          </tr>
+          <tr>
+            <td>reports</td>
+            <td>KEY idx_reports_post_id</td>
+            <td>post_id</td>
+            <td>신고 대상 게시글/댓글 조회</td>
+          </tr>
+          <tr>
+            <td>reports</td>
+            <td>KEY idx_reports_resolved</td>
+            <td>is_resolved, created_at</td>
+            <td>미처리 신고 목록 정렬 조회</td>
+          </tr>
+          <tr>
+            <td>blocked_words</td>
+            <td>UNIQUE KEY uq_blocked_word</td>
+            <td>word</td>
+            <td>금칙어 중복 등록 방지</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="task-desc" style="margin-top:10px;">
+        외래키는 <code>board_posts.user_id</code>, <code>board_posts.parent_id</code>,
+        <code>attachments.post_id</code>, <code>attachments.user_id</code>,
+        <code>comment_likes.post_id</code>, <code>comment_likes.user_id</code>,
+        <code>reports.post_id</code>, <code>reports.reporter_id</code>에 정의되어 있습니다.
+      </div>
+      <div class="task-desc" style="margin-top:14px;">
+        <strong>migrations/schema.sql 전체 원문</strong>
+      </div>
+      <pre class="sql-source"><code>CREATE DATABASE IF NOT EXISTS `node_board`
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE `node_board`;
+
+
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(30) NOT NULL,
+  `display_name` VARCHAR(50) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_users_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `user_sessions` (
+  `session_id` VARCHAR(128) NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
+  `username` VARCHAR(30) NOT NULL,
+  `display_name` VARCHAR(50) NOT NULL,
+  `ip_address` VARCHAR(45) NOT NULL,
+  `user_agent` VARCHAR(255) NOT NULL,
+  `login_at` DATETIME NOT NULL,
+  `last_activity_at` DATETIME NOT NULL,
+  `logout_at` DATETIME NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`session_id`),
+  KEY `idx_user_sessions_user_id` (`user_id`),
+  KEY `idx_user_sessions_active` (`is_active`, `last_activity_at`),
+  CONSTRAINT `fk_user_sessions_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `board_posts` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `parent_id` INT UNSIGNED NULL,
+  `thread_id` INT UNSIGNED NULL,
+  `depth` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `author` VARCHAR(50) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL DEFAULT '',
+  `title` VARCHAR(200) NOT NULL,
+  `content` TEXT NOT NULL,
+  `view_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_board_posts_user_id` (`user_id`),
+  KEY `idx_board_posts_parent_id` (`parent_id`),
+  KEY `idx_board_posts_thread_id` (`thread_id`),
+  KEY `idx_board_posts_list` (`thread_id`, `parent_id`, `created_at`),
+  CONSTRAINT `fk_board_posts_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE RESTRICT,
+  CONSTRAINT `fk_board_posts_parent`
+    FOREIGN KEY (`parent_id`) REFERENCES `board_posts` (`id`)
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `attachments` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `post_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
+  `filename` VARCHAR(255) NOT NULL,
+  `mime_type` VARCHAR(100) NOT NULL,
+  `byte_size` INT UNSIGNED NOT NULL,
+  `data` LONGBLOB NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_attachments_post_id` (`post_id`),
+  CONSTRAINT `fk_attachments_post`
+    FOREIGN KEY (`post_id`) REFERENCES `board_posts` (`id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_attachments_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `comment_likes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `post_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_comment_likes_post_user` (`post_id`, `user_id`),
+  KEY `idx_comment_likes_post_id` (`post_id`),
+  KEY `idx_comment_likes_user_id` (`user_id`),
+  CONSTRAINT `fk_comment_likes_post`
+    FOREIGN KEY (`post_id`) REFERENCES `board_posts` (`id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `fk_comment_likes_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `users` (`username`, `display_name`, `password_hash`)
+SELECT
+  'admin',
+  CONVERT(0xEAB480EBA6ACEC9E90 USING utf8mb4),
+  '$2y$10$1qY4yItBjR6HafeuDOruKexF31CaeXMSggICxVXmZe4sFYu59MzxK'
+WHERE NOT EXISTS (SELECT 1 FROM `users` WHERE `username` = 'admin');
+
+INSERT INTO `board_posts`
+  (`user_id`, `parent_id`, `thread_id`, `depth`, `author`, `password_hash`, `title`, `content`, `created_at`)
+SELECT
+  (SELECT `id` FROM `users` WHERE `username` = 'admin' LIMIT 1),
+  NULL,
+  NULL,
+  0,
+  CONVERT(0xEAB480EBA6ACEC9E90 USING utf8mb4),
+  '',
+  CONVERT(0xEB8BB5EBB380ED989520EAB28CEC8B9CED8C90EC9D8420EC8B9CEC9E91ED95A9EB8B88EB8BA4 USING utf8mb4),
+  CONVERT(0xECB2AB20EBB288ECA7B820EC8398ED948C20EAB880EC9E85EB8B88EB8BA42E20EBB984EBB080EBB288ED98B8EB8A94203132333420EC9E85EB8B88EB8BA42E USING utf8mb4),
+  NOW()
+WHERE NOT EXISTS (SELECT 1 FROM `board_posts`);
+
+UPDATE `board_posts`
+SET `thread_id` = `id`
+WHERE `thread_id` IS NULL;</code></pre>
+
+      <div class="task-desc" style="margin-top:14px;">
+        <strong>migrations/admin_mypage.sql 전체 원문</strong>
+      </div>
+      <pre class="sql-source"><code>-- 회원 차단 컬럼
+ALTER TABLE `users`
+  ADD COLUMN `is_banned` TINYINT(1) NOT NULL DEFAULT 0 AFTER `password_hash`,
+  ADD COLUMN `banned_at` DATETIME NULL AFTER `is_banned`;
+
+-- 게시물 공지 컬럼
+ALTER TABLE `board_posts`
+  ADD COLUMN `is_notice` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_deleted`;
+
+-- 신고 테이블
+CREATE TABLE IF NOT EXISTS `reports` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `reporter_id` INT UNSIGNED NOT NULL,
+  `post_id` INT UNSIGNED NOT NULL,
+  `reason` VARCHAR(500) NOT NULL DEFAULT '',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_resolved` TINYINT(1) NOT NULL DEFAULT 0,
+  `resolved_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_reports_post_id` (`post_id`),
+  KEY `idx_reports_resolved` (`is_resolved`, `created_at`),
+  CONSTRAINT `fk_reports_post` FOREIGN KEY (`post_id`) REFERENCES `board_posts` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reports_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 금칙어 테이블
+CREATE TABLE IF NOT EXISTS `blocked_words` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `word` VARCHAR(100) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_blocked_word` (`word`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;</code></pre>
+    </div>
+  </div>
+
+  <footer>
+    node-board &nbsp;|&nbsp; Next.js 14 + MySQL &nbsp;|&nbsp; 최종 업데이트 2026-05-08 (삭제 댓글 플레이스홀더)
+  </footer>
+
+</div>
+</body>
+</html>
